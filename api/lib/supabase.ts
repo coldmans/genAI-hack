@@ -10,7 +10,7 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 export interface Policy {
     id?: string;
     title: string;
-    source: 'shopnews' | 'mss';
+    source: 'shopnews' | 'mss' | 'naver';
     category?: string;
     summary?: string;
     url: string;

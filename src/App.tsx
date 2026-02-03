@@ -199,6 +199,24 @@ export default function App() {
     return () => clearInterval(interval);
   }, [needsOnboarding]);
 
+  // 수동 새로고침 (크롤링 + 데이터 갱신)
+  const handleManualRefresh = async () => {
+    setLoading(true);
+    try {
+      console.log('[Refresh] Starting crawl...');
+      // 1. 크롤링 트리거 (실시간 데이터 수집)
+      await fetch('/api/crawl');
+
+      // 2. 최신 데이터 다시 가져오기
+      await fetchPolicies();
+    } catch (err) {
+      console.error('Refresh failed:', err);
+      setError('새로고침 중 오류가 발생했습니다.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleAlertClick = (alert: Alert) => {
     if (alert.url) {
       window.open(alert.url, '_blank');
@@ -265,7 +283,7 @@ export default function App() {
               <h2 className="section-title">오늘의 주요 알림</h2>
               <button
                 className="refresh-btn"
-                onClick={fetchPolicies}
+                onClick={handleManualRefresh}
                 disabled={loading}
               >
                 <RefreshCw className={`refresh-icon ${loading ? 'spinning' : ''}`} />

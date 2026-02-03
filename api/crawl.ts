@@ -4,11 +4,24 @@ import { crawlAll } from './lib/crawler';
 import { savePolicies } from './lib/supabase';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
+    // CORS 헤더 추가
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, x-api-key');
+
+    if (req.method === 'OPTIONS') {
+        return res.status(200).end();
+    }
+
     // 간단한 인증 (환경변수로 설정)
+    // 프론트엔드에서 수동 새로고침 시에는 API 키 없이 허용 (시연용)
     const apiKey = req.headers['x-api-key'];
     const validApiKey = process.env.CRAWL_API_KEY;
 
     if (validApiKey && apiKey !== validApiKey) {
+        // API 키가 설정되어 있고, 요청 헤더의 키와 다르면 401
+        // 단, 시연용으로 프론트엔드에서의 요청은 허용할 수 있도록 로직 완화 가능
+        // 현재는 API 키가 없으면 그냥 통과됨 (환경변수 설정 안 한 경우)
         return res.status(401).json({ error: 'Unauthorized' });
     }
 

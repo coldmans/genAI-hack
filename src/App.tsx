@@ -1,7 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { AlertCard } from './components/AlertCard';
 import { ChatSection } from './components/ChatSection';
-import { Bell, Menu, User, RefreshCw } from 'lucide-react';
+import { Onboarding } from './components/Onboarding';
+import { Bell, Menu, User, RefreshCw, Settings } from 'lucide-react';
+
+// 사용자 프로필 타입
+interface UserProfile {
+  businessType: string;
+  location: string;
+  interests: string[];
+  businessSize: string;
+}
 
 interface Alert {
   id: string;
@@ -46,11 +55,28 @@ function policyToAlert(policy: PolicyFromAPI): Alert {
   };
 }
 
+// 로컬스토리지에서 프로필 가져오기
+function getStoredProfile(): UserProfile | null {
+  const stored = localStorage.getItem('userProfile');
+  if (stored) {
+    try {
+      return JSON.parse(stored);
+    } catch {
+      return null;
+    }
+  }
+  return null;
+}
+
 export default function App() {
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(getStoredProfile());
   const [activeTab, setActiveTab] = useState<'alerts' | 'chat'>('chat');
   const [alerts, setAlerts] = useState<Alert[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // 온보딩이 필요한지 확인
+  const needsOnboarding = !userProfile;
 
   // 기본 알림 데이터 (API 실패 시 폴백)
   const defaultAlerts: Alert[] = [
@@ -108,7 +134,7 @@ export default function App() {
       const notification = new Notification('📢 사장님 맞춤 알림', {
         body: alert.title,
         icon: '/favicon.ico',
-        tag: alert.id, // 중복 알림 방지
+        tag: alert.id,
       });
 
       notification.onclick = () => {
@@ -128,11 +154,24 @@ export default function App() {
     }
   };
 
+  // 온보딩 완료 핸들러
+  const handleOnboardingComplete = (profile: UserProfile) => {
+    setUserProfile(profile);
+    console.log('[Profile] User profile saved:', profile);
+  };
+
+  // 프로필 초기화 (다시 온보딩)
+  const resetProfile = () => {
+    localStorage.removeItem('userProfile');
+    setUserProfile(null);
+  };
+
   // 컴포넌트 마운트 시 데이터 가져오기 + 5분마다 자동 새로고침 (시연용)
   useEffect(() => {
+    if (needsOnboarding) return;
+
     // 알림 권한 요청
     requestNotificationPermission();
-
     fetchPolicies();
 
     // 5분(300,000ms)마다 자동 새로고침 및 알림
@@ -158,7 +197,7 @@ export default function App() {
     }, 5 * 60 * 1000);
 
     return () => clearInterval(interval);
-  }, []);
+  }, [needsOnboarding]);
 
   const handleAlertClick = (alert: Alert) => {
     if (alert.url) {
@@ -167,6 +206,11 @@ export default function App() {
       setActiveTab('chat');
     }
   };
+
+  // 온보딩이 필요하면 온보딩 화면 표시
+  if (needsOnboarding) {
+    return <Onboarding onComplete={handleOnboardingComplete} />;
+  }
 
   return (
     <div className="mobile-container">
@@ -182,8 +226,16 @@ export default function App() {
               <Bell className="header-icon" />
               <span className="badge">{alerts.length}</span>
             </div>
-            <User className="header-icon" />
+            <button onClick={resetProfile} className="header-icon-btn" title="프로필 재설정">
+              <Settings className="header-icon" />
+            </button>
           </div>
+        </div>
+        {/* 사용자 프로필 표시 */}
+        <div className="profile-badge">
+          <span>{userProfile?.businessType}</span>
+          <span>•</span>
+          <span>{userProfile?.location}</span>
         </div>
       </header>
 

@@ -102,14 +102,59 @@ export default function App() {
     }
   };
 
+  // 브라우저 알림 보내기
+  const sendNotification = (alert: Alert) => {
+    if ('Notification' in window && Notification.permission === 'granted') {
+      const notification = new Notification('📢 사장님 맞춤 알림', {
+        body: alert.title,
+        icon: '/favicon.ico',
+        tag: alert.id, // 중복 알림 방지
+      });
+
+      notification.onclick = () => {
+        window.focus();
+        if (alert.url) {
+          window.open(alert.url, '_blank');
+        }
+      };
+    }
+  };
+
+  // 알림 권한 요청
+  const requestNotificationPermission = async () => {
+    if ('Notification' in window) {
+      const permission = await Notification.requestPermission();
+      console.log('[Notification] Permission:', permission);
+    }
+  };
+
   // 컴포넌트 마운트 시 데이터 가져오기 + 5분마다 자동 새로고침 (시연용)
   useEffect(() => {
+    // 알림 권한 요청
+    requestNotificationPermission();
+
     fetchPolicies();
 
-    // 5분(300,000ms)마다 자동 새로고침
-    const interval = setInterval(() => {
+    // 5분(300,000ms)마다 자동 새로고침 및 알림
+    const interval = setInterval(async () => {
       console.log('[Auto Refresh] Fetching new policies...');
-      fetchPolicies();
+
+      try {
+        const response = await fetch('/api/policies?limit=5&filtered=true');
+        const data = await response.json();
+
+        if (data.success && data.policies && data.policies.length > 0) {
+          const convertedAlerts = data.policies.map(policyToAlert);
+          setAlerts(convertedAlerts);
+
+          // 첫 번째 알림 보내기
+          if (convertedAlerts.length > 0) {
+            sendNotification(convertedAlerts[0]);
+          }
+        }
+      } catch (err) {
+        console.error('Failed to fetch policies:', err);
+      }
     }, 5 * 60 * 1000);
 
     return () => clearInterval(interval);

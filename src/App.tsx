@@ -76,13 +76,14 @@ export default function App() {
     },
   ];
 
-  // 정책 데이터 가져오기
+  // 정책 데이터 가져오기 (AI 필터링 적용)
   const fetchPolicies = async () => {
     setLoading(true);
     setError(null);
 
     try {
-      const response = await fetch('/api/policies?limit=10');
+      // filtered=true로 AI 맞춤 필터링 적용
+      const response = await fetch('/api/policies?limit=10&filtered=true');
       const data = await response.json();
 
       if (data.success && data.policies && data.policies.length > 0) {
@@ -101,9 +102,17 @@ export default function App() {
     }
   };
 
-  // 컴포넌트 마운트 시 데이터 가져오기
+  // 컴포넌트 마운트 시 데이터 가져오기 + 5분마다 자동 새로고침 (시연용)
   useEffect(() => {
     fetchPolicies();
+
+    // 5분(300,000ms)마다 자동 새로고침
+    const interval = setInterval(() => {
+      console.log('[Auto Refresh] Fetching new policies...');
+      fetchPolicies();
+    }, 5 * 60 * 1000);
+
+    return () => clearInterval(interval);
   }, []);
 
   const handleAlertClick = (alert: Alert) => {

@@ -1,6 +1,7 @@
 // 네이버 뉴스 검색 크롤러
 import * as cheerio from 'cheerio';
 import type { Policy } from './supabase';
+import { analyzePolicyWithGemini } from './gemini';
 
 // 네이버 뉴스 검색 URL (소상공인 키워드)
 const NAVER_NEWS_URL = 'https://search.naver.com/search.naver?where=news&query=%EC%86%8C%EC%83%81%EA%B3%B5%EC%9D%B8';
@@ -91,7 +92,7 @@ export async function crawlNaverNewsCheerio(): Promise<Policy[]> {
         );
 
         console.log(`[Naver News Cheerio] Crawled ${uniquePolicies.length} articles`);
-        return uniquePolicies.slice(0, 20);
+        return uniquePolicies.slice(0, 40); // 20 -> 40개로 증가 (더 많은 후보군 확보)
 
     } catch (error) {
         console.error('[Naver News Cheerio] Crawl error:', error);
@@ -100,15 +101,18 @@ export async function crawlNaverNewsCheerio(): Promise<Policy[]> {
 }
 
 // 모든 소스에서 크롤링 (Gemini AI 분석 적용)
-import { analyzePolicyWithGemini } from './gemini';
-
 export async function crawlAll(): Promise<Policy[]> {
     console.log('[Crawler] Starting crawl...');
     const rawPolicies = await crawlNaverNewsCheerio();
     console.log(`[Crawler] Raw policies found: ${rawPolicies.length}`);
 
-    // 상위 10개만 분석 (API 비용 및 속도 고려)
-    const policiesToAnalyze = rawPolicies.slice(0, 10);
+    // 1차 필터링: 명백히 관련 없는 뉴스 제외 (API 비용 절약)
+    const excludeKeywords = ['주식', '코스피', '코스닥', '마감', '특징주', '증시', '부고', '인사', '동정', '포토', '영상', '스포츠', '연예', '날씨'];
+    const filteredRaw = rawPolicies.filter(p => !excludeKeywords.some(k => p.title.includes(k)));
+    console.log(`[Crawler] After pre-filtering: ${filteredRaw.length} policies`);
+
+    // 상위 15개만 분석 (API 비용 및 속도 고려, Pre-filtering으로 더 알짜배기만 남음)
+    const policiesToAnalyze = filteredRaw.slice(0, 15);
     const analyzedPolicies: Policy[] = [];
 
     // 병렬로 AI 분석 실행

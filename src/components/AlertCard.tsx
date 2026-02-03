@@ -4,7 +4,7 @@ import { AlertTriangle, Clock, ChevronRight } from 'lucide-react';
 interface Alert {
   id: string;
   title: string;
-  dDay?: number;
+  dateDisplay?: string;
   category: string;
   urgent: boolean;
 }
@@ -25,9 +25,9 @@ export function AlertCard({ alert, onClick }: AlertCardProps) {
           <span className={`alert-category ${alert.urgent ? 'urgent' : ''}`}>
             {alert.category}
           </span>
-          {alert.dDay !== undefined && (
+          {alert.dateDisplay && (
             <span className={`alert-dday ${alert.urgent ? 'urgent' : ''}`}>
-              D-{alert.dDay}
+              {alert.dateDisplay}
             </span>
           )}
         </div>

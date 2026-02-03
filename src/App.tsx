@@ -15,7 +15,7 @@ interface UserProfile {
 interface Alert {
   id: string;
   title: string;
-  dDay?: number;
+  dateDisplay?: string; // D-Day 대신 문자열로 변경
   category: string;
   urgent: boolean;
   url?: string;
@@ -33,14 +33,27 @@ interface PolicyFromAPI {
 
 // 정책 데이터를 Alert 형태로 변환
 function policyToAlert(policy: PolicyFromAPI): Alert {
-  // D-Day 계산 (공개일로부터 7일 이내면 표시)
-  let dDay: number | undefined;
+  // 날짜 표시 계산 (오늘, 어제, N일 전)
+  let dateDisplay: string | undefined;
   if (policy.published_at) {
     const publishDate = new Date(policy.published_at);
+    // UTC to KST 보정 등은 필요 시 진행, 여기선 날짜 차이만 계산
     const today = new Date();
-    const diffDays = Math.ceil((publishDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
-    if (diffDays >= 0 && diffDays <= 7) {
-      dDay = diffDays;
+    // 시간 성분 제거 후 비교
+    publishDate.setHours(0, 0, 0, 0);
+    today.setHours(0, 0, 0, 0);
+
+    const diffTime = today.getTime() - publishDate.getTime();
+    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+
+    if (diffDays === 0) {
+      dateDisplay = '오늘';
+    } else if (diffDays === 1) {
+      dateDisplay = '어제';
+    } else if (diffDays > 1 && diffDays <= 7) {
+      dateDisplay = `${diffDays}일 전`;
+    } else {
+      dateDisplay = policy.published_at.substring(5, 10); // MM-DD
     }
   }
 
@@ -48,8 +61,8 @@ function policyToAlert(policy: PolicyFromAPI): Alert {
     id: policy.id,
     title: policy.title,
     category: policy.category || (policy.source === 'mss' ? '정책' : '뉴스'),
-    urgent: dDay !== undefined && dDay <= 3,
-    dDay,
+    urgent: dateDisplay === '오늘', // 오늘 나온 소식만 긴급으로 표시
+    dateDisplay,
     url: policy.url,
     source: policy.source
   };
@@ -79,25 +92,27 @@ export default function App() {
   const needsOnboarding = !userProfile;
 
   // 기본 알림 데이터 (API 실패 시 폴백)
+  // 기본 알림 데이터 (API 실패 시 폴백)
   const defaultAlerts: Alert[] = [
     {
       id: '1',
       title: '소상공인 손실보전금 신청 마감',
-      dDay: 3,
+      dateDisplay: '오늘',
       category: '지원금',
       urgent: true,
     },
     {
       id: '2',
       title: '최저임금 개정안 시행 안내',
-      dDay: 7,
+      dateDisplay: '3일 전',
       category: '노무',
-      urgent: true,
+      urgent: false,
     },
     {
       id: '3',
       title: '외식업 위생등급제 신청 혜택',
       category: '제도',
+      dateDisplay: '어제',
       urgent: false,
     },
   ];

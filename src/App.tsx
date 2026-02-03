@@ -103,8 +103,8 @@ export default function App() {
   ];
 
   // 정책 데이터 가져오기 (AI 필터링 적용)
-  const fetchPolicies = async () => {
-    setLoading(true);
+  const fetchPolicies = async (showLoading = true) => {
+    if (showLoading) setLoading(true);
     setError(null);
 
     try {
@@ -137,10 +137,14 @@ export default function App() {
       }
     } catch (err) {
       console.error('Failed to fetch policies:', err);
-      setAlerts(defaultAlerts);
-      setError('정책 데이터를 불러오는데 실패했습니다.');
+      // 수동 리프레시 중이 아닐 때만 기본 데이터로 폴백
+      if (showLoading) {
+        setAlerts(defaultAlerts);
+        setError('정책 데이터를 불러오는데 실패했습니다.');
+      }
+      throw err;
     } finally {
-      setLoading(false);
+      if (showLoading) setLoading(false);
     }
   };
 
@@ -232,18 +236,33 @@ export default function App() {
   }, [needsOnboarding, userProfile]);
 
   // 수동 새로고침 (크롤링 + 데이터 갱신)
+  // 수동 새로고침 (크롤링 + 데이터 갱신)
   const handleManualRefresh = async () => {
+    if (loading) return;
     setLoading(true);
-    try {
-      console.log('[Refresh] Starting crawl...');
-      // 1. 크롤링 트리거 (실시간 데이터 수집)
-      await fetch('/api/crawl');
+    setError(null);
 
-      // 2. 최신 데이터 다시 가져오기
-      await fetchPolicies();
+    try {
+      console.log('[Refresh] 1. Starting crawl...');
+      // 1. 크롤링 트리거 (실시간 데이터 수집)
+      const crawlRes = await fetch('/api/crawl');
+
+      if (!crawlRes.ok) {
+        const errText = await crawlRes.text();
+        throw new Error(`크롤링 서버 오류 (${crawlRes.status}): ${errText.slice(0, 100)}`);
+      }
+
+      const crawlData = await crawlRes.json();
+      console.log('[Refresh] 2. Crawl complete:', crawlData);
+
+      // 2. 최신 데이터 다시 가져오기 (로딩바 유지)
+      console.log('[Refresh] 3. Fetching updated policies...');
+      await fetchPolicies(false); // 로딩 상태 변경 없이 데이터만 갱신
+
+      console.log('[Refresh] 4. Success');
     } catch (err) {
       console.error('Refresh failed:', err);
-      setError('새로고침 중 오류가 발생했습니다.');
+      setError(err instanceof Error ? err.message : '새로고침 중 오류가 발생했습니다.');
     } finally {
       setLoading(false);
     }

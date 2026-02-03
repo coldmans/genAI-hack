@@ -99,9 +99,47 @@ export async function crawlNaverNewsCheerio(): Promise<Policy[]> {
     }
 }
 
-// 모든 소스에서 크롤링
+// 모든 소스에서 크롤링 (Gemini AI 분석 적용)
+import { analyzePolicyWithGemini } from './gemini';
+
 export async function crawlAll(): Promise<Policy[]> {
-    const results = await crawlNaverNewsCheerio();
-    console.log(`[Crawler] Total: ${results.length} policies`);
-    return results;
+    console.log('[Crawler] Starting crawl...');
+    const rawPolicies = await crawlNaverNewsCheerio();
+    console.log(`[Crawler] Raw policies found: ${rawPolicies.length}`);
+
+    // 상위 10개만 분석 (API 비용 및 속도 고려)
+    const policiesToAnalyze = rawPolicies.slice(0, 10);
+    const analyzedPolicies: Policy[] = [];
+
+    // 병렬로 AI 분석 실행
+    const analysisPromises = policiesToAnalyze.map(async (policy) => {
+        const analysis = await analyzePolicyWithGemini(policy.title, policy.summary || '');
+
+        if (analysis.isRelevant) {
+            // 태그 생성 (예: [음식점/서울])
+            const industryTag = analysis.targetIndustries && analysis.targetIndustries.length > 0
+                ? analysis.targetIndustries.join(',')
+                : '전체업종';
+            const locationTag = analysis.targetLocations && analysis.targetLocations.length > 0
+                ? analysis.targetLocations.join(',')
+                : '전국';
+
+            return {
+                ...policy,
+                category: analysis.category || policy.category,
+                summary: `[${industryTag}/${locationTag}] ${analysis.summary || policy.summary}`
+            };
+        }
+        return null; // 관련 없는 정책
+    });
+
+    const results = await Promise.all(analysisPromises);
+
+    // null 제거 (관련 없는 정책 필터링)
+    results.forEach(result => {
+        if (result) analyzedPolicies.push(result);
+    });
+
+    console.log(`[Crawler] AI Analyzed & Filtered: ${analyzedPolicies.length} policies`);
+    return analyzedPolicies;
 }

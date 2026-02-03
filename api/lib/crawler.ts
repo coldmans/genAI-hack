@@ -1,79 +1,107 @@
-// 크롤러 (Mock 데이터 + 추후 Playwright 확장)
+// 네이버 뉴스 검색 크롤러
+import * as cheerio from 'cheerio';
 import type { Policy } from './supabase';
 
-// Playwright가 없으면 Mock 데이터 사용
-// 실제 배포 시 Playwright 기반 크롤링으로 전환 필요
+// 네이버 뉴스 검색 URL (소상공인 키워드)
+const NAVER_NEWS_URL = 'https://search.naver.com/search.naver?where=news&query=%EC%86%8C%EC%83%81%EA%B3%B5%EC%9D%B8';
 
-// Mock 정책 데이터 (실제 크롤링 전 테스트용)
-const MOCK_POLICIES: Policy[] = [
-    {
-        title: '2026년 소상공인 손실보전금 신청 안내',
-        source: 'mss',
-        category: '지원금',
-        summary: '코로나19 피해 소상공인 대상 손실보전금 지원',
-        url: 'https://www.mss.go.kr/site/smba/ex/bbs/View.do?cbIdx=86&bcIdx=1001',
-        published_at: new Date().toISOString().split('T')[0]
-    },
-    {
-        title: '최저임금 개정안 2026년 시행 안내',
-        source: 'mss',
-        category: '노무',
-        summary: '2026년 최저임금 인상 및 적용 방법 안내',
-        url: 'https://www.mss.go.kr/site/smba/ex/bbs/View.do?cbIdx=86&bcIdx=1002',
-        published_at: new Date().toISOString().split('T')[0]
-    },
-    {
-        title: '소상공인 전용 저금리 대출 상품 출시',
-        source: 'shopnews',
-        category: '금융',
-        summary: '소상공인진흥공단 연계 저금리 대출 상품',
-        url: 'https://shopnews.kr/boards/500/view',
-        published_at: new Date().toISOString().split('T')[0]
-    },
-    {
-        title: '외식업 위생등급제 신청 시 세금 혜택',
-        source: 'mss',
-        category: '제도',
-        summary: '위생등급 취득 시 세금 감면 혜택 안내',
-        url: 'https://www.mss.go.kr/site/smba/ex/bbs/View.do?cbIdx=86&bcIdx=1003',
-        published_at: new Date().toISOString().split('T')[0]
-    },
-    {
-        title: '2026년 글로벌 강소기업 프로젝트 참여기업 모집',
-        source: 'mss',
-        category: '수출',
-        summary: '글로벌 시장 진출 지원 프로젝트 참여 모집',
-        url: 'https://www.mss.go.kr/site/smba/ex/bbs/View.do?cbIdx=248&bcIdx=1004',
-        published_at: new Date(Date.now() - 86400000).toISOString().split('T')[0]
+// 네이버 뉴스 크롤러
+export async function crawlNaverNews(): Promise<Policy[]> {
+    try {
+        const response = await fetch(NAVER_NEWS_URL, {
+            headers: {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+                'Accept-Language': 'ko-KR,ko;q=0.9'
+            }
+        });
+
+        const html = await response.text();
+        const policies: Policy[] = [];
+
+        // href 패턴으로 뉴스 링크 추출
+        const linkRegex = /href="(https?:\/\/[^"]+)"\s+class="[^"]*"[^>]*target="_blank"[^>]*data-heatmap-target="\.tit"[^>]*>\s*<span[^>]*>([^<]+(?:<mark>[^<]+<\/mark>[^<]*)*)<\/span>/g;
+
+        let match;
+        while ((match = linkRegex.exec(html)) !== null) {
+            const url = match[1];
+            // 제목에서 <mark> 태그 제거
+            const title = match[2].replace(/<\/?mark>/g, '').trim();
+
+            if (title && title.length > 5 && !url.includes('more')) {
+                policies.push({
+                    title,
+                    source: 'naver',
+                    category: '뉴스',
+                    url,
+                    published_at: new Date().toISOString().split('T')[0],
+                    summary: '네이버 뉴스 - 소상공인 관련'
+                });
+            }
+        }
+
+        // 중복 제거
+        const uniquePolicies = policies.filter((policy, index, self) =>
+            index === self.findIndex((p) => p.url === policy.url)
+        );
+
+        console.log(`[Naver News] Crawled ${uniquePolicies.length} articles`);
+        return uniquePolicies.slice(0, 20); // 최대 20개
+
+    } catch (error) {
+        console.error('[Naver News] Crawl error:', error);
+        return [];
     }
-];
-
-// 중소벤처기업부 크롤러 (현재 Mock)
-export async function crawlMSS(): Promise<Policy[]> {
-    console.log('[MSS] Using mock data (Playwright required for real crawling)');
-
-    // TODO: Playwright 기반 실제 크롤링 구현
-    // 현재는 Mock 데이터 반환
-    return MOCK_POLICIES.filter(p => p.source === 'mss');
 }
 
-// 소상공인경제신문 크롤러 (현재 Mock)
-export async function crawlShopNews(): Promise<Policy[]> {
-    console.log('[ShopNews] Using mock data (Playwright required for real crawling)');
+// Cheerio 기반 파싱 (더 안정적)
+export async function crawlNaverNewsCheerio(): Promise<Policy[]> {
+    try {
+        const response = await fetch(NAVER_NEWS_URL, {
+            headers: {
+                'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36',
+                'Accept-Language': 'ko-KR,ko;q=0.9'
+            }
+        });
 
-    // TODO: Playwright 기반 실제 크롤링 구현
-    return MOCK_POLICIES.filter(p => p.source === 'shopnews');
+        const html = await response.text();
+        const $ = cheerio.load(html);
+        const policies: Policy[] = [];
+
+        // 뉴스 링크 추출 (data-heatmap-target=".tit" 속성)
+        $('a[data-heatmap-target=".tit"]').each((_, element) => {
+            const $el = $(element);
+            const url = $el.attr('href') || '';
+            const title = $el.text().trim();
+
+            if (title && title.length > 5 && url.startsWith('http')) {
+                policies.push({
+                    title,
+                    source: 'naver',
+                    category: '뉴스',
+                    url,
+                    published_at: new Date().toISOString().split('T')[0],
+                    summary: '네이버 뉴스 - 소상공인 관련'
+                });
+            }
+        });
+
+        // 중복 제거
+        const uniquePolicies = policies.filter((policy, index, self) =>
+            index === self.findIndex((p) => p.url === policy.url)
+        );
+
+        console.log(`[Naver News Cheerio] Crawled ${uniquePolicies.length} articles`);
+        return uniquePolicies.slice(0, 20);
+
+    } catch (error) {
+        console.error('[Naver News Cheerio] Crawl error:', error);
+        return [];
+    }
 }
 
 // 모든 소스에서 크롤링
 export async function crawlAll(): Promise<Policy[]> {
-    const [mssResults, shopNewsResults] = await Promise.all([
-        crawlMSS(),
-        crawlShopNews()
-    ]);
-
-    const allPolicies = [...mssResults, ...shopNewsResults];
-    console.log(`[Crawler] Total: ${allPolicies.length} policies`);
-
-    return allPolicies;
+    const results = await crawlNaverNewsCheerio();
+    console.log(`[Crawler] Total: ${results.length} policies`);
+    return results;
 }

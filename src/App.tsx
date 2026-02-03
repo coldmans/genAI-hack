@@ -108,8 +108,24 @@ export default function App() {
     setError(null);
 
     try {
+      // 사용자 프로필 쿼리 파라미터 생성
+      const queryParams = new URLSearchParams({
+        limit: '10',
+        filtered: 'true'
+      });
+
+      if (userProfile) {
+        queryParams.append('userId', 'local-user');
+        queryParams.append('businessType', userProfile.businessType);
+        queryParams.append('location', userProfile.location);
+        queryParams.append('businessSize', userProfile.businessSize);
+        if (userProfile.interests && userProfile.interests.length > 0) {
+          queryParams.append('interests', userProfile.interests.join(','));
+        }
+      }
+
       // filtered=true로 AI 맞춤 필터링 적용
-      const response = await fetch('/api/policies?limit=10&filtered=true');
+      const response = await fetch(`/api/policies?${queryParams.toString()}`);
       const data = await response.json();
 
       if (data.success && data.policies && data.policies.length > 0) {
@@ -179,7 +195,23 @@ export default function App() {
       console.log('[Auto Refresh] Fetching new policies...');
 
       try {
-        const response = await fetch('/api/policies?limit=5&filtered=true');
+        // 사용자 프로필 쿼리 파라미터 생성
+        const queryParams = new URLSearchParams({
+          limit: '5',
+          filtered: 'true'
+        });
+
+        if (userProfile) {
+          queryParams.append('userId', 'local-user');
+          queryParams.append('businessType', userProfile.businessType);
+          queryParams.append('location', userProfile.location);
+          queryParams.append('businessSize', userProfile.businessSize);
+          if (userProfile.interests && userProfile.interests.length > 0) {
+            queryParams.append('interests', userProfile.interests.join(','));
+          }
+        }
+
+        const response = await fetch(`/api/policies?${queryParams.toString()}`);
         const data = await response.json();
 
         if (data.success && data.policies && data.policies.length > 0) {
@@ -197,7 +229,7 @@ export default function App() {
     }, 5 * 60 * 1000);
 
     return () => clearInterval(interval);
-  }, [needsOnboarding]);
+  }, [needsOnboarding, userProfile]);
 
   // 수동 새로고침 (크롤링 + 데이터 갱신)
   const handleManualRefresh = async () => {

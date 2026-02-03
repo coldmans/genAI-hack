@@ -20,6 +20,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         const filtered = req.query.filtered === 'true'; // AI 필터링 적용 여부
         const userId = req.query.userId as string;
 
+        // 사용자 프로필 파싱 (쿼리 스트링 -> 객체)
+        const userProfile = userId || req.query.businessType ? {
+            businessType: req.query.businessType as string || '기타',
+            location: req.query.location as string || '전국',
+            interests: typeof req.query.interests === 'string' ? (req.query.interests as string).split(',') : [],
+            businessSize: req.query.businessSize as string
+        } : undefined;
+
+        console.log('[Policies API] User Profile:', userProfile);
+
         // Supabase에서 정책 조회
         let policies = await getPolicies(limit);
 
@@ -30,7 +40,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
         // AI 기반 맞춤 필터링
         if (filtered && policies && policies.length > 0) {
-            policies = filterPoliciesForUser(policies, undefined, 5);
+            policies = filterPoliciesForUser(policies, userProfile, 5);
         }
 
         return res.status(200).json({

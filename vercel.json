@@ -1,5 +1,22 @@
 {
     "buildCommand": "npm run build",
     "outputDirectory": "build",
-    "framework": "vite"
+    "framework": "vite",
+    "functions": {
+        "api/**/*.ts": {
+            "runtime": "@vercel/node@3.0.0"
+        }
+    },
+    "rewrites": [
+        {
+            "source": "/api/(.*)",
+            "destination": "/api/$1"
+        }
+    ],
+    "crons": [
+        {
+            "path": "/api/crawl",
+            "schedule": "0 7 * * *"
+        }
+    ]
 }

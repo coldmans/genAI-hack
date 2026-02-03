@@ -37,9 +37,27 @@ function calculateRelevanceScore(policy: Policy, profile: UserProfile): number {
         if (content.includes(keyword)) score += 2;
     });
 
-    // 지역 매칭
-    if (content.includes(profile.location.toLowerCase())) {
-        score += 3;
+    // 주요 행정구역 목록
+    const regions = ['서울', '부산', '대구', '인천', '광주', '대전', '울산', '세종', '경기', '강원', '충북', '충남', '전북', '전남', '경북', '경남', '제주', '수원', '성남', '고양', '용인', '부천', '안산', '안양', '남양주', '화성', '청주', '천안', '전주', '포항', '창원', '김해'];
+
+    // 타 지역 배제 로직 (Negative Filtering)
+    if (profile.location && profile.location !== '전국') {
+        const userLoc = profile.location.substring(0, 2); // 앞 2글자만 비교 (예: 대전광역시 -> 대전)
+
+        // 내 지역이 포함되어 있으면 가산점
+        if (content.includes(userLoc)) {
+            score += 5; // 가산점 상향
+        } else {
+            // 내 지역은 없는데 타 지역 명칭이 명시적으로 있는 경우 감점
+            const otherRegion = regions.find(r => content.includes(r) && !r.startsWith(userLoc) && userLoc.indexOf(r) === -1);
+            if (otherRegion) {
+                // 단, '전국', '정부', '중기부' 등 전국 대상 키워드가 없으면 제외
+                if (!content.includes('전국') && !content.includes('정부') && !content.includes('방방곡곡')) {
+                    console.log(`[AI Filter] Excluding '${policy.title}' (Mismatch: User=${userLoc}, Found=${otherRegion})`);
+                    score -= 100; // 사실상 제외
+                }
+            }
+        }
     }
 
     // 관심사 매칭
@@ -67,27 +85,29 @@ export function filterPoliciesForUser(
     // 관련성 점수 계산 및 정렬
     const scoredPolicies = policies.map(policy => {
         const score = calculateRelevanceScore(policy, profile);
-        console.log(`[AI Filter] Policy: "${policy.title}" Score: ${score}`);
+        // console.log(`[AI Filter] Policy: "${policy.title}" Score: ${score}`);
         return { policy, score };
     });
 
     // 점수순 정렬
     scoredPolicies.sort((a, b) => b.score - a.score);
 
-    // 최소 점수 이상만 필터링 (기준 완화: 1점 이상)
-    // 또는 최근 3일 이내 뉴스면 무조건 포함 (점수가 0이어도)
+    // 최소 점수 이상만 필터링 (기준: 1점 이상)
+    // 최근 뉴스여도 점수가 -10 이하면 (타 지역) 제외
     const threeDaysAgo = new Date();
     threeDaysAgo.setDate(threeDaysAgo.getDate() - 3);
 
     const relevantPolicies = scoredPolicies
         .filter(item => {
+            if (item.score <= -10) return false; // 타 지역 등 명시적 제외 대상
+
             const isRecent = item.policy.published_at && new Date(item.policy.published_at) >= threeDaysAgo;
             return item.score >= 1 || isRecent;
         })
         .slice(0, maxCount)
         .map(item => item.policy);
 
-    console.log(`[AI Filter] Filtered ${relevantPolicies.length}/${policies.length} policies for user`);
+    console.log(`[AI Filter] Filtered ${relevantPolicies.length}/${policies.length} policies for user (${profile.location})`);
 
     return relevantPolicies;
 }

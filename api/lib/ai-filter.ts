@@ -65,17 +65,25 @@ export function filterPoliciesForUser(
     maxCount: number = 5
 ): Policy[] {
     // 관련성 점수 계산 및 정렬
-    const scoredPolicies = policies.map(policy => ({
-        policy,
-        score: calculateRelevanceScore(policy, profile)
-    }));
+    const scoredPolicies = policies.map(policy => {
+        const score = calculateRelevanceScore(policy, profile);
+        console.log(`[AI Filter] Policy: "${policy.title}" Score: ${score}`);
+        return { policy, score };
+    });
 
     // 점수순 정렬
     scoredPolicies.sort((a, b) => b.score - a.score);
 
-    // 최소 점수 이상만 필터링 (관련 있는 것만)
+    // 최소 점수 이상만 필터링 (기준 완화: 1점 이상)
+    // 또는 최근 3일 이내 뉴스면 무조건 포함 (점수가 0이어도)
+    const threeDaysAgo = new Date();
+    threeDaysAgo.setDate(threeDaysAgo.getDate() - 3);
+
     const relevantPolicies = scoredPolicies
-        .filter(item => item.score >= 2)
+        .filter(item => {
+            const isRecent = item.policy.published_at && new Date(item.policy.published_at) >= threeDaysAgo;
+            return item.score >= 1 || isRecent;
+        })
         .slice(0, maxCount)
         .map(item => item.policy);
 

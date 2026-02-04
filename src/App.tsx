@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { AlertCard } from './components/AlertCard';
 import { ChatSection } from './components/ChatSection';
 import { DemoChat } from './components/DemoChat';
+import { PolicyQuiz } from './components/PolicyQuiz';
 import { Onboarding } from './components/Onboarding';
 import { Bell, Menu, User, RefreshCw, Settings } from 'lucide-react';
 
@@ -84,7 +85,7 @@ function getStoredProfile(): UserProfile | null {
 
 export default function App() {
   const [userProfile, setUserProfile] = useState<UserProfile | null>(getStoredProfile());
-  const [activeTab, setActiveTab] = useState<'alerts' | 'chat' | 'demo'>('chat');
+  const [activeTab, setActiveTab] = useState<'alerts' | 'chat' | 'demo' | 'quiz'>('chat');
   const [alerts, setAlerts] = useState<Alert[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -315,6 +316,12 @@ export default function App() {
           🏆 정책 분석
         </button>
         <button
+          className={`tab-btn ${activeTab === 'quiz' ? 'active' : ''}`}
+          onClick={() => setActiveTab('quiz')}
+        >
+          🎮 OX퀴즈
+        </button>
+        <button
           className={`tab-btn ${activeTab === 'alerts' ? 'active' : ''}`}
           onClick={() => setActiveTab('alerts')}
         >
@@ -328,6 +335,8 @@ export default function App() {
           <ChatSection />
         ) : activeTab === 'demo' ? (
           <DemoChat userProfile={userProfile} />
+        ) : activeTab === 'quiz' ? (
+          <PolicyQuiz userProfile={userProfile} />
         ) : (
           <div className="alerts-section">
             <div className="section-header">

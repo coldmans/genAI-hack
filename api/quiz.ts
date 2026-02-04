@@ -13,11 +13,21 @@ interface Quiz {
     relatedPolicy: string;
 }
 
+// 배열 섞기 (Fisher-Yates Shuffle)
+function shuffleArray<T>(array: T[]): T[] {
+    const newArray = [...array];
+    for (let i = newArray.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [newArray[i], newArray[j]] = [newArray[j], newArray[i]];
+    }
+    return newArray;
+}
+
 // Gemini API로 퀴즈 생성
 async function generateQuizzesWithGemini(policies: any[]): Promise<Quiz[]> {
     if (!GEMINI_API_KEY) {
-        console.log('[Quiz API] Gemini API key not configured, using fallback');
-        return getFallbackQuizzes();
+        console.log('[Quiz API] Gemini API key not configured, using shuffled fallback');
+        return shuffleArray(getFallbackQuizzes());
     }
 
     // 정책 정보를 요약해서 프롬프트에 포함
@@ -25,16 +35,20 @@ async function generateQuizzesWithGemini(policies: any[]): Promise<Quiz[]> {
         `- ${p.title} (출처: ${p.source})`
     ).join('\n');
 
+    const seed = Math.random().toString(36).substring(7); // 랜덤 시드 추가
+
     const prompt = `당신은 소상공인 정책 전문가입니다. 아래 정책 정보를 바탕으로 소상공인/자영업자를 위한 OX 퀴즈 5개를 만들어주세요.
+Seed: ${seed} (매번 다른 퀴즈를 생성하세요)
 
 [정책 정보]
 ${policyContext}
 
 [요구사항]
 1. 소상공인이 실제로 알아야 할 유용한 정보를 퀴즈로 만들어주세요.
-2. 정답이 O인 것 3개, X인 것 2개로 균형있게 만들어주세요.
+2. 정답이 O인 것과 X인 것을 섞어서 만들어주세요.
 3. 설명은 친근하고 이해하기 쉽게 작성해주세요.
 4. 팁은 실용적인 조언을 담아주세요.
+5. 기존과 다른 새로운 관점의 퀴즈를 만들어주세요.
 
 [출력 형식 - 반드시 이 JSON 형식으로만 응답하세요]
 [
@@ -60,7 +74,7 @@ JSON 배열만 출력하세요. 다른 텍스트는 포함하지 마세요.`;
                     parts: [{ text: prompt }]
                 }],
                 generationConfig: {
-                    temperature: 0.7,
+                    temperature: 0.9, // 다양성을 위해 온도 높임
                     maxOutputTokens: 2048,
                 }
             })
@@ -68,7 +82,7 @@ JSON 배열만 출력하세요. 다른 텍스트는 포함하지 마세요.`;
 
         if (!response.ok) {
             console.error('[Quiz API] Gemini API error:', response.status);
-            return getFallbackQuizzes();
+            return shuffleArray(getFallbackQuizzes());
         }
 
         const data = await response.json();
@@ -76,7 +90,7 @@ JSON 배열만 출력하세요. 다른 텍스트는 포함하지 마세요.`;
 
         if (!text) {
             console.error('[Quiz API] No text in Gemini response');
-            return getFallbackQuizzes();
+            return shuffleArray(getFallbackQuizzes());
         }
 
         // JSON 파싱 시도
@@ -99,10 +113,10 @@ JSON 배열만 출력하세요. 다른 텍스트는 포함하지 마세요.`;
             console.error('[Quiz API] JSON parse error:', parseError);
         }
 
-        return getFallbackQuizzes();
+        return shuffleArray(getFallbackQuizzes());
     } catch (error) {
         console.error('[Quiz API] Gemini request failed:', error);
-        return getFallbackQuizzes();
+        return shuffleArray(getFallbackQuizzes());
     }
 }
 
@@ -182,7 +196,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return res.status(200).json({
             success: true,
             count: 5,
-            quizzes: getFallbackQuizzes(),
+            quizzes: shuffleArray(getFallbackQuizzes()),
             fallback: true
         });
     }

@@ -1,6 +1,7 @@
 // OX 퀴즈 동적 생성 API 엔드포인트
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { getPolicies } from './lib/supabase';
+import { filterPoliciesForUser } from './lib/ai-filter';
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent';
@@ -24,21 +25,25 @@ function shuffleArray<T>(array: T[]): T[] {
 }
 
 // Gemini API로 퀴즈 생성
-async function generateQuizzesWithGemini(policies: any[]): Promise<Quiz[]> {
+async function generateQuizzesWithGemini(policies: any[], userContext: string = ''): Promise<Quiz[]> {
     if (!GEMINI_API_KEY) {
         console.log('[Quiz API] Gemini API key not configured, using shuffled fallback');
         return shuffleArray(getFallbackQuizzes());
     }
 
     // 정책 정보를 요약해서 프롬프트에 포함
-    const policyContext = policies.slice(0, 10).map(p =>
-        `- ${p.title} (출처: ${p.source})`
+    const policyContext = policies.slice(0, 15).map(p =>
+        `- ${p.title} (대상: ${p.region || '전국'}, 출처: ${p.source})`
     ).join('\n');
 
     const seed = Math.random().toString(36).substring(7); // 랜덤 시드 추가
 
     const prompt = `당신은 소상공인 정책 전문가입니다. 아래 정책 정보를 바탕으로 소상공인/자영업자를 위한 OX 퀴즈 5개를 만들어주세요.
 Seed: ${seed} (매번 다른 퀴즈를 생성하세요)
+
+[사용자 정보]
+${userContext}
+* 이 사용자의 지역/업종에 맞는 퀴즈를 우선적으로 만들어주세요.
 
 [정책 정보]
 ${policyContext}
@@ -82,7 +87,9 @@ JSON 배열만 출력하세요. 다른 텍스트는 포함하지 마세요.`;
 
         if (!response.ok) {
             console.error('[Quiz API] Gemini API error:', response.status);
-            return shuffleArray(getFallbackQuizzes());
+            const errorText = await response.text();
+            console.error('[Quiz API] Error details:', errorText);
+            throw new Error(`Gemini API Error: ${response.status}`);
         }
 
         const data = await response.json();
@@ -121,7 +128,8 @@ JSON 배열만 출력하세요. 다른 텍스트는 포함하지 마세요.`;
         return shuffleArray(getFallbackQuizzes());
     } catch (error) {
         console.error('[Quiz API] Gemini request failed:', error);
-        return shuffleArray(getFallbackQuizzes());
+        // 에러를 던져서 상위에서 폴백 처리하도록 함
+        throw error;
     }
 }
 
@@ -177,16 +185,41 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     try {
-        // Supabase에서 최신 정책 가져오기
+        const location = req.query.location as string;
+        const businessType = req.query.businessType as string;
+
+        // Supabase에서 최신 정책 가져오기 (충분한 양 가져와서 필터링)
         let policies = [];
         try {
-            policies = await getPolicies(10) || [];
+            policies = await getPolicies(40) || []; // 40개 가져와서 필터링
         } catch (dbError) {
             console.log('[Quiz API] Database not available, using fallback');
         }
 
+        // 사용자 맞춤 필터링 (지역/업종)
+        let filteredPolicies = policies;
+        let userContext = '';
+
+        if (location || businessType) {
+            const userProfile = {
+                location: location || '전국',
+                businessType: businessType || '기타',
+                interests: [],
+                businessSize: '소상공인'
+            };
+
+            // 필터링 적용
+            filteredPolicies = filterPoliciesForUser(policies, userProfile, 10);
+
+            userContext = `- 지역: ${location || '미지정'}\n- 업종: ${businessType || '미지정'}`;
+            console.log('[Quiz API] Filtered policies for user:', userContext);
+        }
+
+        // 필터링 결과가 너무 적으면 원본 사용
+        const targetPolicies = (filteredPolicies && filteredPolicies.length >= 3) ? filteredPolicies : policies;
+
         // Gemini로 퀴즈 생성
-        const quizzes = await generateQuizzesWithGemini(policies);
+        const quizzes = await generateQuizzesWithGemini(targetPolicies, userContext);
 
         return res.status(200).json({
             success: true,

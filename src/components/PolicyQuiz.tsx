@@ -69,7 +69,12 @@ export function PolicyQuiz({ userProfile }: PolicyQuizProps) {
         const fetchQuizzes = async () => {
             setLoading(true);
             try {
-                const response = await fetch('/api/quiz');
+                // 사용자 프로필 정보 전달
+                const params = new URLSearchParams();
+                if (userProfile?.location) params.append('location', userProfile.location);
+                if (userProfile?.businessType) params.append('businessType', userProfile.businessType);
+
+                const response = await fetch(`/api/quiz?${params.toString()}`);
                 const data = await response.json();
 
                 console.log('[Quiz Debug] Key Configured:', data.isKeyConfigured);
@@ -130,7 +135,13 @@ export function PolicyQuiz({ userProfile }: PolicyQuizProps) {
 
         // 새로운 퀴즈 가져오기 (캐시 방지)
         try {
-            const response = await fetch('/api/quiz?t=' + new Date().getTime());
+            // 사용자 프로필 정보 전달 (캐시 방지 + 프로필)
+            const params = new URLSearchParams();
+            params.append('t', new Date().getTime().toString());
+            if (userProfile?.location) params.append('location', userProfile.location);
+            if (userProfile?.businessType) params.append('businessType', userProfile.businessType);
+
+            const response = await fetch(`/api/quiz?${params.toString()}`);
             const data = await response.json();
 
             console.log('[Quiz Debug] Key Configured:', data.isKeyConfigured);

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { BarChart3, CheckCircle, AlertTriangle, FileText, Phone, ChevronDown, ChevronUp, Sparkles } from 'lucide-react';
+import { BarChart3, CheckCircle, AlertTriangle, FileText, Phone, ChevronDown, ChevronUp, Sparkles, ExternalLink, Bell } from 'lucide-react';
 
 interface DemoChatProps {
     userProfile: any;
@@ -25,7 +25,8 @@ const POLICIES = [
         approvalRate: 85,
         fit: '매우 적합',
         fitLevel: 3,
-        reason: '음식점업 특화 상품으로 최적 부합, 신용점수 158점 초과'
+        reason: '음식점업 특화 상품으로 최적 부합, 신용점수 158점 초과',
+        applyUrl: 'https://www.koreg.or.kr/main/service'
     },
     {
         id: 2,
@@ -38,7 +39,8 @@ const POLICIES = [
         approvalRate: 80,
         fit: '적합',
         fitLevel: 3,
-        reason: '다양한 은행 선택 가능, 신용점수 43점 초과'
+        reason: '다양한 은행 선택 가능, 신용점수 43점 초과',
+        applyUrl: 'https://www.koreg.or.kr/main/service'
     },
     {
         id: 3,
@@ -51,7 +53,8 @@ const POLICIES = [
         approvalRate: 75,
         fit: '적합',
         fitLevel: 2,
-        reason: '이자 부담 경감, 기존 대출 보유 여부가 변수'
+        reason: '이자 부담 경감, 기존 대출 보유 여부가 변수',
+        applyUrl: 'https://www.mss.go.kr/site/smba/main.do'
     },
     {
         id: 4,
@@ -64,7 +67,8 @@ const POLICIES = [
         approvalRate: 60,
         fit: '지역 불일치',
         fitLevel: 1,
-        reason: '사업장이 부평구 (중구 아님)'
+        reason: '사업장이 부평구 (중구 아님)',
+        applyUrl: 'https://www.incheon.go.kr/'
     }
 ];
 
@@ -91,6 +95,7 @@ export function DemoChat({ userProfile }: DemoChatProps) {
     const [showChart, setShowChart] = useState(false);
     const [showGuide, setShowGuide] = useState(false);
     const [showConsultation, setShowConsultation] = useState(false);
+    const [pushSent, setPushSent] = useState(false);
 
     const handleNextStep = () => {
         setCurrentStep(prev => Math.min(prev + 1, 4));
@@ -109,6 +114,33 @@ export function DemoChat({ userProfile }: DemoChatProps) {
         if (level === 3) return '#DCFCE7';
         if (level === 2) return '#FEF3C7';
         return '#FEE2E2';
+    };
+
+    const sendTestNotification = async () => {
+        if (!('Notification' in window)) {
+            alert('이 브라우저는 알림을 지원하지 않습니다.');
+            return;
+        }
+
+        if (Notification.permission === 'denied') {
+            alert('알림 권한이 거부되었습니다. 브라우저 설정에서 권한을 허용해 주세요.');
+            return;
+        }
+
+        if (Notification.permission !== 'granted') {
+            const permission = await Notification.requestPermission();
+            if (permission !== 'granted') return;
+        }
+
+        // 테스트 알림 전송
+        new Notification('🏆 사장님 비서 알림', {
+            body: '외식업 자영업자 금융지원 협약보증 신청 마감이 3일 남았습니다!',
+            icon: '/vite.svg',
+            tag: 'demo-notification'
+        });
+
+        setPushSent(true);
+        setTimeout(() => setPushSent(false), 3000);
     };
 
     return (
@@ -216,6 +248,16 @@ export function DemoChat({ userProfile }: DemoChatProps) {
                                         <div className="policy-reason">
                                             💡 {policy.reason}
                                         </div>
+                                        <a
+                                            href={policy.applyUrl}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="policy-apply-btn"
+                                            onClick={(e) => e.stopPropagation()}
+                                        >
+                                            <ExternalLink size={14} />
+                                            신청 바로가기
+                                        </a>
                                     </div>
                                 )}
                             </div>
@@ -357,6 +399,14 @@ export function DemoChat({ userProfile }: DemoChatProps) {
                                     <strong>외식업 자영업자 금융지원 협약보증</strong>
                                     <p>승인 가능성 85% | 5,000만원 한도 | 음식점업 특화</p>
                                 </div>
+                                <a
+                                    href="https://www.koreg.or.kr/main/service"
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="rank-apply-btn"
+                                >
+                                    신청하기
+                                </a>
                             </div>
                             <div className="rank-item silver">
                                 <span className="rank-badge">2순위</span>
@@ -386,6 +436,14 @@ export function DemoChat({ userProfile }: DemoChatProps) {
                     <div className="demo-complete">
                         ✅ 분석 완료 - 실제 서비스에서는 실시간 데이터를 기반으로 분석됩니다.
                     </div>
+
+                    <button
+                        className={`push-test-btn ${pushSent ? 'sent' : ''}`}
+                        onClick={sendTestNotification}
+                    >
+                        <Bell size={18} />
+                        {pushSent ? '✅ 알림 전송 완료!' : '🔔 푸시 알림 테스트'}
+                    </button>
                 </div>
             )}
         </div>

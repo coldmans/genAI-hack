@@ -93,24 +93,29 @@ JSON 배열만 출력하세요. 다른 텍스트는 포함하지 마세요.`;
             return shuffleArray(getFallbackQuizzes());
         }
 
-        // JSON 파싱 시도
+        console.log('[Quiz API] Raw Gemini Response:', text.substring(0, 100) + '...');
+
+        // JSON 파싱 시도 (정규식으로 배열 추출)
         try {
-            // ```json ... ``` 형식 처리
             let jsonText = text;
-            if (text.includes('```json')) {
-                jsonText = text.split('```json')[1].split('```')[0].trim();
-            } else if (text.includes('```')) {
-                jsonText = text.split('```')[1].split('```')[0].trim();
+
+            // 대괄호로 둘러싸인 JSON 배열 찾기
+            const jsonMatch = text.match(/\[[\s\S]*\]/);
+            if (jsonMatch) {
+                jsonText = jsonMatch[0];
             }
 
             const quizzes = JSON.parse(jsonText);
 
             if (Array.isArray(quizzes) && quizzes.length > 0) {
-                console.log(`[Quiz API] Generated ${quizzes.length} quizzes with Gemini`);
+                console.log(`[Quiz API] Successfully generated ${quizzes.length} quizzes`);
                 return quizzes.slice(0, 5); // 최대 5개
+            } else {
+                console.error('[Quiz API] Parsed JSON is not a valid array:', quizzes);
             }
         } catch (parseError) {
             console.error('[Quiz API] JSON parse error:', parseError);
+            console.error('[Quiz API] Failed text:', text);
         }
 
         return shuffleArray(getFallbackQuizzes());

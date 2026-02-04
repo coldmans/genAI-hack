@@ -26,7 +26,7 @@ const POLICIES = [
         fit: '매우 적합',
         fitLevel: 3,
         reason: '음식점업 특화 상품으로 최적 부합, 신용점수 158점 초과',
-        applyUrl: 'https://www.koreg.or.kr/main/service'
+        applyUrl: 'https://www.koreg.or.kr/'
     },
     {
         id: 2,
@@ -40,7 +40,7 @@ const POLICIES = [
         fit: '적합',
         fitLevel: 3,
         reason: '다양한 은행 선택 가능, 신용점수 43점 초과',
-        applyUrl: 'https://www.koreg.or.kr/main/service'
+        applyUrl: 'https://www.koreg.or.kr/'
     },
     {
         id: 3,
@@ -54,7 +54,7 @@ const POLICIES = [
         fit: '적합',
         fitLevel: 2,
         reason: '이자 부담 경감, 기존 대출 보유 여부가 변수',
-        applyUrl: 'https://www.mss.go.kr/site/smba/main.do'
+        applyUrl: 'https://www.mss.go.kr/'
     },
     {
         id: 4,
@@ -372,7 +372,7 @@ export function DemoChat({ userProfile }: DemoChatProps) {
                                     <p>승인 가능성 85% | 5,000만원 한도 | 음식점업 특화</p>
                                 </div>
                                 <a
-                                    href="https://www.koreg.or.kr/main/service"
+                                    href="https://www.koreg.or.kr/"
                                     target="_blank"
                                     rel="noopener noreferrer"
                                     className="rank-apply-btn"

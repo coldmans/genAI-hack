@@ -117,6 +117,7 @@ export function PolicyQuiz({ userProfile }: PolicyQuizProps) {
     };
 
     const handleRestart = async () => {
+        setLoading(true);
         setCurrentIndex(0);
         setSelectedAnswer(null);
         setShowResult(false);
@@ -124,18 +125,22 @@ export function PolicyQuiz({ userProfile }: PolicyQuizProps) {
         setAnswered([]);
         setQuizComplete(false);
 
-        // 새로운 퀴즈 가져오기
-        setLoading(true);
+        // 새로운 퀴즈 가져오기 (캐시 방지)
         try {
-            const response = await fetch('/api/quiz');
+            const response = await fetch('/api/quiz?t=' + new Date().getTime());
             const data = await response.json();
 
             if (data.success && data.quizzes && data.quizzes.length > 0) {
                 setQuizzes(data.quizzes);
                 setIsAiGenerated(!data.fallback);
+            } else {
+                setQuizzes(FALLBACK_QUIZZES);
+                setIsAiGenerated(false);
             }
         } catch (error) {
             console.error('Failed to fetch new quizzes:', error);
+            setQuizzes(FALLBACK_QUIZZES);
+            setIsAiGenerated(false);
         } finally {
             setLoading(false);
         }

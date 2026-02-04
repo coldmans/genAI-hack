@@ -92,31 +92,7 @@ export default function App() {
   // 온보딩이 필요한지 확인
   const needsOnboarding = !userProfile;
 
-  // 기본 알림 데이터 (API 실패 시 폴백)
-  // 기본 알림 데이터 (API 실패 시 폴백)
-  const defaultAlerts: Alert[] = [
-    {
-      id: '1',
-      title: '소상공인 손실보전금 신청 마감',
-      dateDisplay: '오늘',
-      category: '지원금',
-      urgent: true,
-    },
-    {
-      id: '2',
-      title: '최저임금 개정안 시행 안내',
-      dateDisplay: '3일 전',
-      category: '노무',
-      urgent: false,
-    },
-    {
-      id: '3',
-      title: '외식업 위생등급제 신청 혜택',
-      category: '제도',
-      dateDisplay: '어제',
-      urgent: false,
-    },
-  ];
+  // API 실패 시 빈 배열로 폴백
 
   // 정책 데이터 가져오기 (AI 필터링 적용)
   const fetchPolicies = async (showLoading = true) => {
@@ -148,14 +124,14 @@ export default function App() {
         const convertedAlerts = data.policies.map(policyToAlert);
         setAlerts(convertedAlerts);
       } else {
-        // API에 데이터가 없으면 기본 알림 사용
-        setAlerts(defaultAlerts);
+        // API에 데이터가 없으면 빈 배열
+        setAlerts([]);
       }
     } catch (err) {
       console.error('Failed to fetch policies:', err);
-      // 수동 리프레시 중이 아닐 때만 기본 데이터로 폴백
+      // API 실패 시 빈 배열로 폴백
       if (showLoading) {
-        setAlerts(defaultAlerts);
+        setAlerts([]);
         setError('정책 데이터를 불러오는데 실패했습니다.');
       }
       throw err;

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { BarChart3, CheckCircle, AlertTriangle, FileText, Phone, ChevronDown, ChevronUp, Sparkles, ExternalLink, Bell } from 'lucide-react';
+import { BarChart3, CheckCircle, AlertTriangle, FileText, Phone, ChevronDown, ChevronUp, Sparkles, ExternalLink } from 'lucide-react';
 
 interface DemoChatProps {
     userProfile: any;
@@ -95,7 +95,6 @@ export function DemoChat({ userProfile }: DemoChatProps) {
     const [showChart, setShowChart] = useState(false);
     const [showGuide, setShowGuide] = useState(false);
     const [showConsultation, setShowConsultation] = useState(false);
-    const [pushSent, setPushSent] = useState(false);
 
     const handleNextStep = () => {
         setCurrentStep(prev => Math.min(prev + 1, 4));
@@ -114,33 +113,6 @@ export function DemoChat({ userProfile }: DemoChatProps) {
         if (level === 3) return '#DCFCE7';
         if (level === 2) return '#FEF3C7';
         return '#FEE2E2';
-    };
-
-    const sendTestNotification = async () => {
-        if (!('Notification' in window)) {
-            alert('이 브라우저는 알림을 지원하지 않습니다.');
-            return;
-        }
-
-        if (Notification.permission === 'denied') {
-            alert('알림 권한이 거부되었습니다. 브라우저 설정에서 권한을 허용해 주세요.');
-            return;
-        }
-
-        if (Notification.permission !== 'granted') {
-            const permission = await Notification.requestPermission();
-            if (permission !== 'granted') return;
-        }
-
-        // 테스트 알림 전송
-        new Notification('🏆 사장님 비서 알림', {
-            body: '외식업 자영업자 금융지원 협약보증 신청 마감이 3일 남았습니다!',
-            icon: '/vite.svg',
-            tag: 'demo-notification'
-        });
-
-        setPushSent(true);
-        setTimeout(() => setPushSent(false), 3000);
     };
 
     return (
@@ -436,14 +408,6 @@ export function DemoChat({ userProfile }: DemoChatProps) {
                     <div className="demo-complete">
                         ✅ 분석 완료 - 실제 서비스에서는 실시간 데이터를 기반으로 분석됩니다.
                     </div>
-
-                    <button
-                        className={`push-test-btn ${pushSent ? 'sent' : ''}`}
-                        onClick={sendTestNotification}
-                    >
-                        <Bell size={18} />
-                        {pushSent ? '✅ 알림 전송 완료!' : '🔔 푸시 알림 테스트'}
-                    </button>
                 </div>
             )}
         </div>

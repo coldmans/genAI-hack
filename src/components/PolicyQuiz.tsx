@@ -232,6 +232,13 @@ export function PolicyQuiz({ userProfile }: PolicyQuizProps) {
         );
     }
 
+    const cleanQuestion = (text: string) => {
+        return text
+            .replace(/\s*[\(\[]\s*[OXox]\s*[\)\]]$/, '') // 문장 끝의 (O), (X), [O], [X] 제거
+            .replace(/정답\s*[:=]\s*[OXox]/gi, '') // "정답: X" 패턴 제거
+            .trim();
+    };
+
     return (
         <div className="quiz-container">
             {/* AI 생성 배지 */}
@@ -264,7 +271,7 @@ export function PolicyQuiz({ userProfile }: PolicyQuizProps) {
             <div className={`quiz-card ${showResult ? (isCorrect ? 'correct' : 'wrong') : ''}`}>
                 <div className="quiz-question">
                     <span className="question-label">Q.</span>
-                    <p>{currentQuiz.question}</p>
+                    <p>{cleanQuestion(currentQuiz.question)}</p>
                 </div>
 
                 {/* O/X 버튼 */}

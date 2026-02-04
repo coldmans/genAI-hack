@@ -8,6 +8,11 @@
             "destination": "/api/$1"
         }
     ],
+    "functions": {
+        "api/**/*.ts": {
+            "maxDuration": 60
+        }
+    },
     "crons": [
         {
             "path": "/api/crawl",

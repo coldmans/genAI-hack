@@ -72,6 +72,9 @@ export function PolicyQuiz({ userProfile }: PolicyQuizProps) {
                 const response = await fetch('/api/quiz');
                 const data = await response.json();
 
+                console.log('[Quiz Debug] Key Configured:', data.isKeyConfigured);
+                if (data.fallback) console.warn('[Quiz Debug] Using Fallback. Error:', data.error);
+
                 if (data.success && data.quizzes && data.quizzes.length > 0) {
                     setQuizzes(data.quizzes);
                     setIsAiGenerated(!data.fallback);
@@ -129,6 +132,9 @@ export function PolicyQuiz({ userProfile }: PolicyQuizProps) {
         try {
             const response = await fetch('/api/quiz?t=' + new Date().getTime());
             const data = await response.json();
+
+            console.log('[Quiz Debug] Key Configured:', data.isKeyConfigured);
+            if (data.fallback) console.warn('[Quiz Debug] Using Fallback. Error:', data.error);
 
             if (data.success && data.quizzes && data.quizzes.length > 0) {
                 setQuizzes(data.quizzes);

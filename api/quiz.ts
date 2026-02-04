@@ -192,6 +192,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             success: true,
             count: quizzes.length,
             generatedAt: new Date().toISOString(),
+            isKeyConfigured: !!GEMINI_API_KEY,
             quizzes
         });
     } catch (error) {
@@ -202,7 +203,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             success: true,
             count: 5,
             quizzes: shuffleArray(getFallbackQuizzes()),
-            fallback: true
+            fallback: true,
+            isKeyConfigured: !!GEMINI_API_KEY,
+            error: error instanceof Error ? error.message : String(error)
         });
     }
 }

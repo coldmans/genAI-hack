@@ -1,0 +1,36 @@
+# User-generated media and download output
+downloads/
+
+# Audio files
+*.mp3
+*.m4a
+*.wav
+*.ogg
+*.flac
+*.aac
+*.opus
+*.wma
+*.aiff
+
+# Image files
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.webp
+*.bmp
+*.heic
+*.heif
+
+# Video files
+*.mp4
+*.mov
+*.mkv
+*.avi
+*.m4v
+*.webm
+*.flv
+*.wmv
+
+# Misc
+.DS_Store
